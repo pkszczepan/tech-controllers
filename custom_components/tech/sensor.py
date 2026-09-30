@@ -68,9 +68,11 @@ from .const import (
     CONTROLLER,
     CORRECT_WORK,
     CURRENT_STATE,
+    DEVICE_CLASS_BY_UNIT_ID,
     DOMAIN,
     EVENTS,
     FLOOR_PUMP,
+    ICON_BY_UNIT_ID,
     INCLUDE_HUB_IN_NAME,
     LOW_BATTERY,
     LOW_SIGNAL,
@@ -82,6 +84,7 @@ from .const import (
     OPENTHERM_MODULATION,
     OPENTHERM_SET_TEMP,
     OPENTHERM_SET_TEMP_DHW,
+    SENSOR_CLASS_BY_UNIT_ID,
     SENSOR_DAMAGED,
     SENSOR_TYPE,
     SERVICE_ERROR,
@@ -99,6 +102,7 @@ from .const import (
     TYPE_WIDGET,
     UDID,
     UNDERFLOOR,
+    UNIT_BY_ID,
     VALUE,
     VALVE_SENSOR_CURRENT_TEMPERATURE,
     VALVE_SENSOR_RETURN_TEMPERATURE,
@@ -1216,10 +1220,23 @@ class _TileWidgetSensorBase(TileSensor, SensorEntity):
 class TileWidgetTemperatureSensor(_TileWidgetSensorBase):
     """A TYPE_WIDGET widget reporting a (scaled) temperature value."""
 
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _UNIQUE_ID_SUFFIX = "tile_widget_temperature"
+
+    def __init__(
+        self,
+        device,
+        coordinator: TechCoordinator,
+        config_entry: ConfigEntry,
+        widget_key: str,
+    ) -> None:
+
+        _TileWidgetSensorBase.__init__(self, device, coordinator, config_entry, widget_key)
+        widget = device[CONF_PARAMS][self._widget_key]
+        unit = widget.get("unit")
+        self._attr_native_unit_of_measurement = UNIT_BY_ID.get(unit, UnitOfTemperature.CELSIUS)
+        self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(unit, SensorDeviceClass.TEMPERATURE) 
+        self._attr_state_class = SENSOR_CLASS_BY_UNIT_ID.get(unit, SensorStateClass.MEASUREMENT)    
+        self._attr_icon = ICON_BY_UNIT_ID.get(unit, None)
 
     def get_state(self, device) -> Any:
         """Get the state of the device."""

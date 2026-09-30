@@ -33,7 +33,14 @@ tile-derived entities.
 from datetime import timedelta
 from typing import Final
 
-from homeassistant.const import Platform
+from homeassistant.const import (
+    Platform,
+    UnitOfTime,
+    UnitOfTemperature,
+    UnitOfVolumeFlowRate
+)
+
+from homeassistant.components.sensor.const import SensorDeviceClass, SensorStateClass
 
 # ---------------------------------------------------------------------------
 # Config-entry and API field keys
@@ -93,7 +100,8 @@ PLATFORMS = [
 
 # Coordinator polling cadence. The eModul cloud rate-limits aggressive
 # polling, and the boiler tile data does not change faster than ~60s anyway.
-SCAN_INTERVAL: Final = timedelta(seconds=60)
+# 30s allow a comfortable margin.
+SCAN_INTERVAL: Final = timedelta(seconds=30)
 API_TIMEOUT: Final = 60
 
 # A fetched module payload is reused for this many seconds. The seven HA
@@ -182,6 +190,42 @@ ICON_BY_TYPE = {
     TYPE_MIXING_VALVE: "mdi:valve",  # TODO: find a better icon
     TYPE_OPEN_THERM: "mdi:home-thermometer",
 }
+
+# ---------------------------------------------------------------------------
+# Unit mapping tables
+# ---------------------------------------------------------------------------
+UNIT_BY_ID = {
+    4: UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+    7: UnitOfTemperature.CELSIUS,
+    14: UnitOfTime.DAYS,
+    16: UnitOfTime.SECONDS,
+    17: UnitOfTime.MINUTES,
+}
+
+DEVICE_CLASS_BY_UNIT_ID = {
+    4: SensorDeviceClass.VOLUME_FLOW_RATE,
+    7: SensorDeviceClass.TEMPERATURE,
+    14: SensorDeviceClass.DURATION,
+    16: SensorDeviceClass.DURATION,
+    17: SensorDeviceClass.DURATION,
+}
+
+SENSOR_CLASS_BY_UNIT_ID = {
+    4: SensorStateClass.MEASUREMENT,
+    7: SensorStateClass.MEASUREMENT,
+    14: SensorStateClass.TOTAL,
+    16: SensorStateClass.TOTAL,
+    17: SensorStateClass.TOTAL,
+}
+
+ICON_BY_UNIT_ID = {
+    4: "mdi:fan",
+    7: "mdi:thermometer",
+    14: "mdi:timer",
+    16: "mdi:timer",
+    17: "mdi:timer",
+}
+
 
 # ---------------------------------------------------------------------------
 # txtId fallbacks
