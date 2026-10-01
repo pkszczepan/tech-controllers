@@ -10,6 +10,8 @@ from homeassistant.const import (
     ATTR_IDENTIFIERS,
     ATTR_MANUFACTURER,
     CONF_NAME,
+    CONF_PARAMS,
+    CONF_TYPE,
     EntityCategory,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -27,6 +29,7 @@ from .const import (
     MENU_DEPTH_REGISTRATION_LIMIT,
     MENU_ITEM_TYPE_UNIVERSAL_VALUE,
     MENU_ITEM_TYPE_VALUE,
+    TYPE_WIDGET,
     UDID,
     UNIT_BY_ID,
     VALUE_FORMAT_TENTH,
@@ -192,7 +195,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
         params = item.get("params", {})
         raw_unit = params.get("unit")
         raw_value = params.get("value", 0)
-        if tile[CONF_TYPE] == TYPE_WIDGET:
+        if tile and tile.get(CONF_TYPE) == TYPE_WIDGET:
             for widget_key in ("widget1", "widget2"):
                 widget = tile.get(CONF_PARAMS, {}).get(widget_key)
                 if widget and widget.get("unit") != -1 and widget.get(CONF_TYPE) != 0 and widget.get("txtId", 0) != 0:
