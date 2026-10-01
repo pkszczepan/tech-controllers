@@ -195,6 +195,7 @@ ICON_BY_TYPE = {
 # Unit mapping tables
 # ---------------------------------------------------------------------------
 UNIT_BY_ID = {
+    4: None,
     6: UnitOfTemperature.CELSIUS,
     7: UnitOfTemperature.CELSIUS,
     14: UnitOfTime.DAYS,
@@ -203,6 +204,7 @@ UNIT_BY_ID = {
 }
 
 DEVICE_CLASS_BY_UNIT_ID = {
+    4: None,
     6: SensorDeviceClass.TEMPERATURE,
     7: SensorDeviceClass.TEMPERATURE,
     14: SensorDeviceClass.DURATION,
@@ -211,6 +213,7 @@ DEVICE_CLASS_BY_UNIT_ID = {
 }
 
 SENSOR_CLASS_BY_UNIT_ID = {
+    4: None,
     6: SensorStateClass.MEASUREMENT,
     7: SensorStateClass.MEASUREMENT,
     14: SensorStateClass.TOTAL,
