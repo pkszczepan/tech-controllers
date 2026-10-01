@@ -195,7 +195,7 @@ ICON_BY_TYPE = {
 # Unit mapping tables
 # ---------------------------------------------------------------------------
 UNIT_BY_ID = {
-    4: UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR,
+    6: UnitOfTemperature.CELSIUS,
     7: UnitOfTemperature.CELSIUS,
     14: UnitOfTime.DAYS,
     16: UnitOfTime.SECONDS,
@@ -203,7 +203,7 @@ UNIT_BY_ID = {
 }
 
 DEVICE_CLASS_BY_UNIT_ID = {
-    4: SensorDeviceClass.VOLUME_FLOW_RATE,
+    6: SensorDeviceClass.TEMPERATURE,
     7: SensorDeviceClass.TEMPERATURE,
     14: SensorDeviceClass.DURATION,
     16: SensorDeviceClass.DURATION,
@@ -211,7 +211,7 @@ DEVICE_CLASS_BY_UNIT_ID = {
 }
 
 SENSOR_CLASS_BY_UNIT_ID = {
-    4: SensorStateClass.MEASUREMENT,
+    6: SensorStateClass.MEASUREMENT,
     7: SensorStateClass.MEASUREMENT,
     14: SensorStateClass.TOTAL,
     16: SensorStateClass.TOTAL,
@@ -219,11 +219,11 @@ SENSOR_CLASS_BY_UNIT_ID = {
 }
 
 ICON_BY_UNIT_ID = {
-    4: "mdi:fan",
+    6: "mdi:thermometer",
     7: "mdi:thermometer",
-    14: "mdi:timer",
-    16: "mdi:timer",
-    17: "mdi:timer",
+    14: "mdi:calendar-clock",
+    16: "mdi:timer-outline",
+    17: "mdi:timer-outline",
 }
 
 

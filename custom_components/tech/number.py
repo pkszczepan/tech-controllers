@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_IDENTIFIERS,
@@ -20,12 +21,14 @@ from . import assets
 from .const import (
     CONTROLLER,
     DOMAIN,
+    DEVICE_CLASS_BY_UNIT_ID,
     MANUFACTURER,
     MENU_DEPTH_DEFAULT_ENABLED_LIMIT,
     MENU_DEPTH_REGISTRATION_LIMIT,
     MENU_ITEM_TYPE_UNIVERSAL_VALUE,
     MENU_ITEM_TYPE_VALUE,
     UDID,
+    UNIT_BY_ID,
     VALUE_FORMAT_TENTH,
 )
 from .coordinator import TechCoordinator
@@ -54,6 +57,12 @@ async def async_setup_entry(
 
     menus = await coordinator.api.get_module_menus(controller_udid)
     zones = await coordinator.api.get_module_zones(controller_udid)
+    tiles = await coordinator.api.get_module_tiles(controller_udid)
+    tiles_by_menu_id = {
+        tile.get("menuId"): tile
+        for tile in tiles.values()
+        if tile.get("menuId")
+    }
     ctx = assets.build_menu_context(menus, zones, coordinator.translations)
 
     entities: list[MenuNumberEntity] = []
@@ -74,6 +83,7 @@ async def async_setup_entry(
                 coordinator,
                 config_entry,
                 ctx.group_names,
+                tile=tiles_by_menu_id.get(item["id"]),
                 depth=ctx.depths[key],
                 zone_id=ctx.zone_assignments.get(key),
             )
@@ -95,6 +105,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
         coordinator: TechCoordinator,
         config_entry: ConfigEntry,
         group_names: dict[tuple[str, int], str],
+        tile: dict[str, Any] | None = None,
         depth: int = 0,
         zone_id: int | None = None,
     ) -> None:
@@ -106,6 +117,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
             coordinator: Shared Tech data coordinator instance.
             config_entry: Config entry that owns the coordinator.
             group_names: Mapping of ``(menu_type, group_id)`` to group label.
+            tile: Optional tile linked to this menu item through ``menuId``.
             depth: Nesting depth of this item in the Tech menu tree
                 (0 = top-level). Drives ``entity_registry_enabled_default``.
             zone_id: Optional zone ID to associate this entity with a zone device.
@@ -118,6 +130,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
         self._menu_key = menu_key
         self._item_id = item["id"]
         self._menu_type = item["menuType"]
+        self._tile_id = tile["id"] if tile else None
         self._unique_id = f"{self._udid}_menu_{menu_key}"
         self.manufacturer = MANUFACTURER
         self._zone_id = zone_id
@@ -135,7 +148,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
 
         self._disabled = depth > MENU_DEPTH_DEFAULT_ENABLED_LIMIT
 
-        self._update_from_item(item)
+        self._update_from_item(item, tile)
 
     @property
     def unique_id(self) -> str:
@@ -166,16 +179,25 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
             ATTR_MANUFACTURER: self.manufacturer,
         }
 
-    def _update_from_item(self, item: dict[str, Any]) -> None:
-        """Refresh entity properties from a menu item payload.
+    def _update_from_item(
+        self, item: dict[str, Any], tile: dict[str, Any] | None = None
+    ) -> None:
+        """Refresh entity properties from menu and linked tile payloads.
 
         Args:
             item: Menu item dictionary with the most recent values.
+            tile: Optional linked tile dictionary with the latest reading.
 
         """
         params = item.get("params", {})
+        tile_params = tile.get("params", {}) if tile else {}
+        raw_unit = tile_params.get("unit", params.get("unit"))
+        self._attr_native_unit_of_measurement = UNIT_BY_ID.get(raw_unit)
+        self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(raw_unit, None)
         self._format = params.get("format", 1)
         raw_value = params.get("value", 0)
+        if self._attr_device_class == SensorDeviceClass.DURATION:
+            raw_value = tile_params.get("value", raw_value)
         raw_min = params.get("min", 0)
         raw_max = params.get("max", 100)
         step = params.get("jump", 1)
@@ -217,7 +239,8 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
     def _handle_coordinator_update(self, *args: Any) -> None:
         """Handle updated data from the coordinator."""
         menus = self._coordinator.data.get("menus", {})
+        tiles = self._coordinator.data.get("tiles", {})
         item = menus.get(self._menu_key)
         if item:
-            self._update_from_item(item)
+            self._update_from_item(item, tiles.get(self._tile_id))
         self.async_write_ha_state()
