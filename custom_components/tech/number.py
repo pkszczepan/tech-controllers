@@ -193,6 +193,13 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
 
         """
         params = item.get("params", {})
+
+        self._attr_native_unit_of_measurement = UNIT_BY_ID.get(raw_unit)
+        self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(raw_unit, None)
+        self._format = params.get("format", 1)
+        raw_min = params.get("min", 0)
+        raw_max = params.get("max", 100)
+        step = params.get("jump", 1)
         raw_unit = params.get("unit")
         raw_value = params.get("value", 0)
         if tile and tile.get(CONF_TYPE) == TYPE_WIDGET:
@@ -202,13 +209,6 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
                     raw_unit = widget.get("unit", raw_unit)
                     if self._attr_device_class == SensorDeviceClass.DURATION:
                         raw_value = widget.get("value", raw_value)
-
-        self._attr_native_unit_of_measurement = UNIT_BY_ID.get(raw_unit)
-        self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(raw_unit, None)
-        self._format = params.get("format", 1)
-        raw_min = params.get("min", 0)
-        raw_max = params.get("max", 100)
-        step = params.get("jump", 1)
 
         if self._format == VALUE_FORMAT_TENTH:
             self._attr_native_value = raw_value / 10.0
