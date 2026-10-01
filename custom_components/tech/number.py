@@ -190,14 +190,19 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
 
         """
         params = item.get("params", {})
-        tile_params = tile.get("params", {}) if tile else {}
-        raw_unit = tile_params.get("unit", params.get("unit"))
+        raw_unit = params.get("unit")
+        raw_value = params.get("value", 0)
+        if tile[CONF_TYPE] == TYPE_WIDGET:
+            for widget_key in ("widget1", "widget2"):
+                widget = tile.get(CONF_PARAMS, {}).get(widget_key)
+                if widget and widget.get("unit") != -1 and widget.get(CONF_TYPE) != 0 and widget.get("txtId", 0) != 0:
+                    raw_unit = widget.get("unit", raw_unit)
+                    if self._attr_device_class == SensorDeviceClass.DURATION:
+                        raw_value = widget.get("value", raw_value)
+
         self._attr_native_unit_of_measurement = UNIT_BY_ID.get(raw_unit)
         self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(raw_unit, None)
         self._format = params.get("format", 1)
-        raw_value = params.get("value", 0)
-        if self._attr_device_class == SensorDeviceClass.DURATION:
-            raw_value = tile_params.get("value", raw_value)
         raw_min = params.get("min", 0)
         raw_max = params.get("max", 100)
         step = params.get("jump", 1)
