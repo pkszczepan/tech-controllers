@@ -42,16 +42,29 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PARAMS, CONF_TYPE, PERCENTAGE, EntityCategory
+from homeassistant.const import (
+    ATTR_IDENTIFIERS,
+    ATTR_MANUFACTURER,
+    CONF_NAME,
+    CONF_PARAMS,
+    CONF_TYPE,
+    PERCENTAGE,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import UndefinedType
+from homeassistant.helpers.typing import StateType, UndefinedType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import assets
 from .const import (
     CONTROLLER,
+    DEFAULT_ICON,
+    DOMAIN,
+    MANUFACTURER,
+    MENU_ITEM_TYPE_ON_OFF,
+    MENU_ITEM_TYPE_VALUE,
     TYPE_ADDITIONAL_PUMP,
     TYPE_FIRE_SENSOR,
     TYPE_RELAY,
@@ -169,6 +182,7 @@ def _has_pump_widget(params: dict[str, Any]) -> bool:
         metadata = widget_unit(widget.get("unit"))
         if (
             metadata.device_class == SensorDeviceClass.TEMPERATURE
+            or metadata.device_class == SensorDeviceClass.DURATION
             or metadata.unit == PERCENTAGE
         ):
             return True
@@ -195,6 +209,11 @@ async def async_setup_entry(
         # Read from the coordinator's payload rather than fetching: this runs
         # again on every poll, to pick up a tile the controller adds.
         tiles = coordinator.data.get("tiles") or {}
+        menus = coordinator.data.get("menus") or {}
+        zones = coordinator.data.get("zones") or {}
+        ctx = assets.build_menu_context(
+            menus, zones, coordinator.translations
+        )
 
         entities: list[BinarySensorEntity] = []
         for t in tiles:
@@ -249,6 +268,23 @@ async def async_setup_entry(
         schedule_data = (coordinator.data or {}).get("schedules")
         if isinstance(schedule_data, dict) and schedule_data.get("supported"):
             entities.append(ScheduleProblemSensor(coordinator, config_entry))
+
+        for key, item in menus.items():
+            item_type = item.get("type")
+            if item_type not in MENU_ITEM_TYPE_VALUE | {MENU_ITEM_TYPE_ON_OFF}:
+                continue
+
+            if "duringChange" in item:
+                entities.append(
+                    MenuDuringChangeSensor(
+                        item,
+                        key,
+                        coordinator,
+                        config_entry,
+                        ctx.group_names,
+                        zone_id=ctx.zone_assignments.get(key),
+                    )
+                )                
 
         return entities
 
@@ -447,6 +483,18 @@ class TileWidgetStatusSensor(TileBinarySensor):
                     self._name = coordinator.translations.get_text(txt_id)
                     break
 
+    #     self._attr_translation_key = "tile_status_entity"
+    #     self._attr_translation_placeholders = {"entity_name": self._name}                
+
+    # @property
+    # def entity_registry_enabled_default(self) -> bool:
+    #     """Return whether the entity should be enabled by default."""
+    #     return False
+
+    # @property
+    # def name(self) -> str | UndefinedType | None:
+    #     """Return the translated entity name."""
+    #     return super(TileBinarySensor, self).name    
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""
@@ -516,4 +564,74 @@ class ScheduleProblemSensor(CoordinatorEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Write the coordinator's schedule problem state."""
+        self.async_write_ha_state()
+
+class MenuDuringChangeSensor(CoordinatorEntity, BinarySensorEntity):
+    """Diagnostic binary sensor indicating that a menu value is being updated."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        item,
+        menu_key: str,
+        coordinator: TechCoordinator,
+        config_entry: ConfigEntry,
+        group_names,
+        zone_id: int | None = None,
+    ) -> None:
+        """Initialize the during-change sensor."""
+        super().__init__(coordinator)
+
+        self._config_entry = config_entry
+        self._coordinator = coordinator
+        self._udid = config_entry.data[CONTROLLER][UDID]
+        self._menu_key = menu_key
+        self._zone_id = zone_id
+
+        self._unique_id = f"{self._udid}_menu_during_change_{menu_key}"
+
+        self._name = assets.menu_entity_name(
+            item, group_names, coordinator.translations
+        )
+        self._attr_translation_key = "menu_during_change_entity"
+        self._attr_translation_placeholders = {"entity_name": self._name}
+
+        self._attr_is_on = item.get("duringChange") == "t"
+        self._attr_icon = DEFAULT_ICON
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return self._unique_id
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return whether the entity should be enabled by default."""
+        return False
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Associate this sensor with its controller or zone device."""
+        if self._zone_id is not None:
+            return {
+                ATTR_IDENTIFIERS: {(DOMAIN, f"{self._udid}_{self._zone_id}")},
+                ATTR_MANUFACTURER: MANUFACTURER,
+            }
+        return {
+            ATTR_IDENTIFIERS: {(DOMAIN, self._udid)},
+            CONF_NAME: self._config_entry.title,
+            ATTR_MANUFACTURER: MANUFACTURER,
+        }
+
+    @callback
+    def _handle_coordinator_update(self, *args) -> None:
+        """Handle updated data from the coordinator."""
+        menus = self._coordinator.data.get("menus", {})
+        item = menus.get(self._menu_key)
+
+        if item:
+            self._attr_is_on = item.get("duringChange") == "t"
+
         self.async_write_ha_state()

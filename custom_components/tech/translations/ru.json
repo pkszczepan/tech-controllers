@@ -201,12 +201,21 @@
         "binary_sensor": {
             "schedule_problem_entity": {
                 "name": "Проблема расписания"
-            }
+            },
+            "menu_during_change_entity": {
+                "name": "{entity_name} Изменение Выполняется"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Состояние"
+            }            
         },
         "number": {
             "zone_constant_duration": {
                 "name": "Длительность постоянной температуры"
-            }
+            },
+            "menu_current_value_entity": {
+                "name": "{entity_name} Текущее Значение"
+            }            
         },
         "select": {
             "zone_schedule_select": {

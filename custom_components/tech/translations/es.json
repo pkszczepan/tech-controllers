@@ -201,12 +201,21 @@
         "binary_sensor": {
             "schedule_problem_entity": {
                 "name": "Problema de horario"
-            }
+            },
+           "menu_during_change_entity": {
+                "name": "{entity_name} Cambio En Curso"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Estado"
+            }            
         },
         "number": {
             "zone_constant_duration": {
                 "name": "Duración de la temperatura constante"
-            }
+            },
+            "menu_current_value_entity": {
+                "name": "{entity_name} Valor Actual"
+            }            
         },
         "select": {
             "zone_schedule_select": {

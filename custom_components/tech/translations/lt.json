@@ -201,12 +201,21 @@
         "binary_sensor": {
             "schedule_problem_entity": {
                 "name": "Tvarkaraščio problema"
-            }
+            },
+            "menu_during_change_entity": {
+                "name": "{entity_name} Keitimas Vyksta"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Būsena"
+            }            
         },
         "number": {
             "zone_constant_duration": {
                 "name": "Pastovios temperatūros trukmė"
-            }
+            },
+            "menu_current_value_entity": {
+                "name": "{entity_name} Dabartinė Vertė"
+            }            
         },
         "select": {
             "zone_schedule_select": {

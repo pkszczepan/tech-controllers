@@ -201,12 +201,21 @@
         "binary_sensor": {
             "schedule_problem_entity": {
                 "name": "Težava z urnikom"
-            }
+            },
+            "menu_during_change_entity": {
+                "name": "{entity_name} Sprememba Poteka"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Stanje"
+            }            
         },
         "number": {
             "zone_constant_duration": {
                 "name": "Trajanje konstantne temperature"
-            }
+            },
+            "menu_current_value_entity": {
+                "name": "{entity_name} Trenutna Vrednost"
+            }                        
         },
         "select": {
             "zone_schedule_select": {

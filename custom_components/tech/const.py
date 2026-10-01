@@ -101,7 +101,9 @@ PLATFORMS = [
 
 # Coordinator polling cadence. The eModul cloud rate-limits aggressive
 # polling, and the boiler tile data does not change faster than ~60s anyway.
-SCAN_INTERVAL: Final = timedelta(seconds=60)
+# Recuparators have timers updated every minute, so 30 seconds ensures
+# a comfortable margin for timely updates.
+SCAN_INTERVAL: Final = timedelta(seconds=30)
 API_TIMEOUT: Final = 60
 
 # A fetched module payload is reused for this many seconds. The seven HA

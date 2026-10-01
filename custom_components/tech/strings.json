@@ -202,7 +202,13 @@
     "binary_sensor": {
       "schedule_problem_entity": {
         "name": "schedule problem"
-      }
+      },
+      "menu_during_change_entity": {
+        "name": "{entity_name} Change In Progress"
+      },
+      "tile_status_entity": {
+        "name": "{entity_name} Status"
+      }      
     },
     "number": {
       "zone_constant_duration": {
@@ -212,7 +218,10 @@
     "select": {
       "zone_schedule_select": {
         "name": "Schedule"
-      }
+      },
+      "menu_current_value_entity": {
+        "name": "{entity_name} Current Value"
+      }      
     }
   }
 }
