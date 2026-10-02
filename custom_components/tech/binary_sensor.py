@@ -198,6 +198,8 @@ class RelaySensor(TileBinarySensor):
 class TileStatusSensor(TileBinarySensor):
     """Binary sensor representing a tile's statusId."""
 
+    _attr_has_entity_name = True
+
     def __init__(
         self,
         device,
