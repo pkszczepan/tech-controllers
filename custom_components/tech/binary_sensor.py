@@ -112,10 +112,6 @@ async def async_setup_entry(
             entities.append(RelaySensor(tile, coordinator, config_entry))
         if tile[CONF_TYPE] == TYPE_WIDGET:
             params = tile.get(CONF_PARAMS, {})
-            if "statusId" in params:
-                entities.append(
-                    TileStatusSensor(tile, coordinator, config_entry)
-                )
             for widget_key in ("widget1", "widget2"):
                 widget = tile.get(CONF_PARAMS, {}).get(widget_key)
                 if widget and "statusId" in params:

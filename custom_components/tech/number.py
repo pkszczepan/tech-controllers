@@ -40,6 +40,13 @@ _LOGGER = logging.getLogger(__name__)
 
 _EDITABLE_TYPES = MENU_ITEM_TYPE_VALUE | {MENU_ITEM_TYPE_UNIVERSAL_VALUE}
 
+def _is_contact_widget(widget: dict) -> bool:
+    """Return ``True`` for widgets that should be exposed as binary contacts."""
+    return (
+        widget.get("unit") == -1
+        and widget.get(CONF_TYPE) == 0
+        and widget.get("txtId", 0) != 0
+    )        
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -403,10 +410,3 @@ class MenuNumberCurrentValueEntity(CoordinatorEntity, NumberEntity):
             self._update_from_item(item, tiles.get(self._tile_id))
         self.async_write_ha_state()
 
-    def _is_contact_widget(widget: dict) -> bool:
-        """Return ``True`` for widgets that should be exposed as binary contacts."""
-        return (
-            widget.get("unit") == -1
-            and widget.get(CONF_TYPE) == 0
-            and widget.get("txtId", 0) != 0
-        )        
