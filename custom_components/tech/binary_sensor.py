@@ -26,6 +26,7 @@ import logging
 from homeassistant.components import binary_sensor
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    CONF_ID,
     CONF_PARAMS,
     CONF_TYPE,
     STATE_OFF,
