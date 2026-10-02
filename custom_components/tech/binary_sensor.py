@@ -118,6 +118,9 @@ async def async_setup_entry(
                     entities.append(
                         TileStatusSensor(tile, coordinator, config_entry, widget_key)
                     )                
+                    break 
+            for widget_key in ("widget1", "widget2"):
+                widget = tile.get(CONF_PARAMS, {}).get(widget_key)
                 if widget and _is_contact_widget(widget):
                     entities.append(
                         TileWidgetContactSensor(
@@ -210,7 +213,7 @@ class TileStatusSensor(TileBinarySensor):
         """Initialize the status sensor."""
         self._widget_key = widget_key
         TileBinarySensor.__init__(self, device, coordinator, config_entry)
-        self._unique_id = f"{self._udid}_menu_during_change_{menu_key}"
+        self._unique_id = f"{self._udid}_{device[CONF_ID]}_status"
         widget = device[CONF_PARAMS][widget_key]
         self._name = coordinator.translations.get_text(widget["txtId"])
         self._attr_translation_key = "tile_status_entity"
