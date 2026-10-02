@@ -346,8 +346,6 @@ class MenuNumberCurrentValueEntity(CoordinatorEntity, NumberEntity):
         """
         params = item.get("params", {})
 
-        self._attr_native_unit_of_measurement = UNIT_BY_ID.get(raw_unit)
-        self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(raw_unit, None)
         self._format = params.get("format", 1)
         raw_min = params.get("min", 0)
         raw_max = params.get("max", 100)
