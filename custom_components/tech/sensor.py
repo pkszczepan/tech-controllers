@@ -72,7 +72,6 @@ from .const import (
     DOMAIN,
     EVENTS,
     FLOOR_PUMP,
-    ICON_BY_UNIT_ID,
     INCLUDE_HUB_IN_NAME,
     LOW_BATTERY,
     LOW_SIGNAL,
@@ -84,7 +83,6 @@ from .const import (
     OPENTHERM_MODULATION,
     OPENTHERM_SET_TEMP,
     OPENTHERM_SET_TEMP_DHW,
-    SENSOR_CLASS_BY_UNIT_ID,
     SENSOR_DAMAGED,
     SENSOR_TYPE,
     SERVICE_ERROR,
@@ -368,7 +366,7 @@ def _build_widget_tile(
        wild); skip to avoid useless "always 0" sensors.
     4. WIDGET_COLLECTOR_PUMP -> :class:`TileWidgetPumpSensor` (percentage).
     5. Everything else (DHW set/current temp, CH temp, generic
-       ``type==0`` numeric) -> :class:`TileWidgetTemperatureSensor`,
+       ``type==0`` numeric) -> :class:`TileWidgetGenericSensor`,
        which applies unit-aware scaling at read time.
 
     Returns:
@@ -394,12 +392,12 @@ def _build_widget_tile(
         else:
             # WIDGET_DHW_PUMP, WIDGET_TEMPERATURE_CH and any unknown numeric
             # widget (most commonly ``type == 0``) all flow through the
-            # temperature class. Scaling is driven by the widget's own
+            # generic class. Scaling is driven by the widget's own
             # ``unit`` field, not by the widget type, so an unknown numeric
             # type is still rendered correctly so long as ``unit`` is one of
             # the documented values in :data:`const.WIDGET_UNIT_DIVISORS`.
             entities.append(
-                TileWidgetTemperatureSensor(tile, coordinator, config_entry, widget_key)
+                TileWidgetGenericSensor(tile, coordinator, config_entry, widget_key)
             )
     return entities
 
@@ -1217,9 +1215,10 @@ class _TileWidgetSensorBase(TileSensor, SensorEntity):
         return self._name
 
 
-class TileWidgetTemperatureSensor(_TileWidgetSensorBase):
+class TileWidgetGenericSensor(_TileWidgetSensorBase):
     """A TYPE_WIDGET widget reporting a (scaled) temperature value."""
 
+    _attr_state_class = SensorStateClass.MEASUREMENT    
     _UNIQUE_ID_SUFFIX = "tile_widget_temperature"
 
     def __init__(
@@ -1235,8 +1234,6 @@ class TileWidgetTemperatureSensor(_TileWidgetSensorBase):
         unit = widget.get("unit")
         self._attr_native_unit_of_measurement = UNIT_BY_ID.get(unit, UnitOfTemperature.CELSIUS)
         self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(unit, SensorDeviceClass.TEMPERATURE) 
-        self._attr_state_class = SENSOR_CLASS_BY_UNIT_ID.get(unit, SensorStateClass.MEASUREMENT)    
-        self._attr_icon = ICON_BY_UNIT_ID.get(unit, None)
 
     def get_state(self, device) -> Any:
         """Get the state of the device."""

@@ -32,14 +32,17 @@ from homeassistant.const import (
     STATE_ON,
     EntityCategory,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType, UndefinedType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import TechCoordinator, assets
 from .const import (
     CONTROLLER,
     DOMAIN,
+    MENU_DEPTH_DEFAULT_ENABLED_LIMIT,
+    MANUFACTURER,
     TYPE_ADDITIONAL_PUMP,
     TYPE_FIRE_SENSOR,
     TYPE_RELAY,
@@ -83,6 +86,12 @@ async def async_setup_entry(
     # for controller in controllers:
     controller_udid = controller[UDID]
     tiles = await coordinator.api.get_module_tiles(controller_udid)
+    menus = await coordinator.api.get_module_menus(controller_udid)
+
+    zones = await coordinator.api.get_module_zones(controller_udid)
+    ctx = assets.build_menu_context(
+        menus, zones, coordinator.translations
+    )
     # _LOGGER.debug("Setting up entry for binary sensors...tiles: %s", tiles)
     for t in tiles:
         tile = tiles[t]
@@ -102,6 +111,11 @@ async def async_setup_entry(
         if tile[CONF_TYPE] == TYPE_ADDITIONAL_PUMP:
             entities.append(RelaySensor(tile, coordinator, config_entry))
         if tile[CONF_TYPE] == TYPE_WIDGET:
+            params = tile.get(CONF_PARAMS, {})
+            if "statusId" in params:
+                entities.append(
+                    TileStatusSensor(tile, coordinator, config_entry)
+                )
             for widget_key in ("widget1", "widget2"):
                 widget = tile.get(CONF_PARAMS, {}).get(widget_key)
                 if widget and _is_contact_widget(widget):
@@ -110,6 +124,20 @@ async def async_setup_entry(
                             tile, coordinator, config_entry, widget_key
                         )
                     )
+
+    for key, item in menus.items():
+        if "duringChange" in item:
+            entities.append(
+                MenuDuringChangeSensor(
+                    item,
+                    key,
+                    coordinator,
+                    config_entry,
+                    ctx.group_names,
+                    depth=ctx.depths[key],
+                    zone_id=ctx.zone_assignments.get(key),
+                )
+            )
 
     async_add_entities(entities, True)
 
@@ -167,6 +195,34 @@ class RelaySensor(TileBinarySensor):
         return device[CONF_PARAMS]["workingStatus"]
 
 
+class TileStatusSensor(TileBinarySensor):
+    """Binary sensor representing a tile's statusId."""
+
+    def __init__(
+        self,
+        device,
+        coordinator: TechCoordinator,
+        config_entry,
+    ) -> None:
+        """Initialize the status sensor."""
+        TileBinarySensor.__init__(self, device, coordinator, config_entry)
+        self._attr_translation_key = "tile_status_entity"
+        self._attr_translation_placeholders = {"entity_name": self._name}
+
+        icon_id = device[CONF_PARAMS].get("iconId")
+        if icon_id:
+            self._attr_icon = assets.get_icon(icon_id)
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return f"{self._unique_id}_tile_status"
+
+    def get_state(self, device):
+        """Return the tile status from statusId."""
+        return device[CONF_PARAMS].get("statusId", 0) == 1
+
+
 class TileWidgetContactSensor(TileBinarySensor):
     """A widget-shaped contact (e.g. EU-i-3+ voltage / potential-free input).
 
@@ -212,3 +268,63 @@ class TileWidgetContactSensor(TileBinarySensor):
     def get_state(self, device):
         """Return the contact state from the widget value."""
         return device[CONF_PARAMS][self._widget_key][VALUE] == 1
+
+
+class MenuDuringChangeSensor(
+    CoordinatorEntity, binary_sensor.BinarySensorEntity
+):
+    """Diagnostic binary sensor indicating that a menu value is being updated."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        item,
+        menu_key: str,
+        coordinator: TechCoordinator,
+        config_entry: ConfigEntry,
+        group_names,
+        depth: int = 0,
+        zone_id: int | None = None,
+    ) -> None:
+        """Initialize the during-change sensor."""
+        super().__init__(coordinator)
+
+        self._config_entry = config_entry
+        self._coordinator = coordinator
+        self._udid = config_entry.data[CONTROLLER][UDID]
+        self._menu_key = menu_key
+        self._zone_id = zone_id
+
+        self._unique_id = f"{self._udid}_menu_during_change_{menu_key}"
+
+        self._name = assets.menu_entity_name(
+            item, group_names, coordinator.translations
+        )
+        self._attr_translation_key = "menu_during_change_entity"
+        self._attr_translation_placeholders = {"entity_name": self._name}
+
+        self._disabled = depth > MENU_DEPTH_DEFAULT_ENABLED_LIMIT
+        self._attr_is_on = item.get("duringChange") == "t"
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return self._unique_id
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return whether the entity should be enabled by default."""
+        return not self._disabled
+
+    @callback
+    def _handle_coordinator_update(self, *args) -> None:
+        """Handle updated data from the coordinator."""
+        menus = self._coordinator.data.get("menus", {})
+        item = menus.get(self._menu_key)
+
+        if item:
+            self._attr_is_on = item.get("duringChange") == "t"
+
+        self.async_write_ha_state()

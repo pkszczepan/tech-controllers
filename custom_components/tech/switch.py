@@ -174,7 +174,7 @@ class MenuSwitchEntity(CoordinatorEntity, SwitchEntity):
         an immediate coordinator refresh here -- the eModul API has a
         ``duringChange: "t"`` window during which it still reports the old
         value, so an immediate refresh would clobber the optimistic state.
-        The regular 60 s polling cadence reconciles eventually; if the
+        The regular polling cadence reconciles eventually; if the
         controller rejected the change the entity will revert by then.
         """
         await self.coordinator.api.set_menu_value(

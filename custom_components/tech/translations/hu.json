@@ -30,6 +30,19 @@
         }
     },
     "entity": {
+        "binary_sensor": {
+            "menu_during_change_entity": {
+                "name": "{entity_name} Frissítés alatt"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Állapot"
+            }
+        },
+        "number": {
+            "menu_current_value_entity": {
+                "name": "{entity_name} Aktuális Érték"
+            }
+        },
         "sensor": {
             "temperature_entity": {
                 "name": "{entity_name} Hőmérséklet"

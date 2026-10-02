@@ -30,6 +30,19 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "menu_during_change_entity": {
+        "name": "{entity_name} Aktualizacja"
+      },
+      "tile_status_entity": {
+        "name": "{entity_name} Status"
+      }
+    },
+    "number": {
+      "menu_current_value_entity": {
+        "name": "{entity_name} Wartość Aktualna"
+      }
+    },
     "sensor": {
       "temperature_entity": {
         "name": "{entity_name} Temperatura"

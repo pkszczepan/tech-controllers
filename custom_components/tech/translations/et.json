@@ -30,6 +30,19 @@
         }
     },
     "entity": {
+        "binary_sensor": {
+            "menu_during_change_entity": {
+                "name": "{entity_name} Uuendamine"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Olek"
+            }
+        },
+        "number": {
+            "menu_current_value_entity": {
+                "name": "{entity_name} Praegune Väärtus"
+            }
+        },
         "sensor": {
             "temperature_entity": {
                 "name": "{entity_name} Temperatuur"

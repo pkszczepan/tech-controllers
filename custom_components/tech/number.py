@@ -86,11 +86,25 @@ async def async_setup_entry(
                 coordinator,
                 config_entry,
                 ctx.group_names,
-                tile=tiles_by_menu_id.get(item["id"]),
                 depth=ctx.depths[key],
                 zone_id=ctx.zone_assignments.get(key),
             )
         )
+
+        tile = tiles_by_menu_id.get(item["id"])
+        if tile and tile.get(CONF_TYPE) == TYPE_WIDGET:
+            entities.append(
+                MenuNumberCurrentValueEntity(
+                    item,
+                    key,
+                    coordinator,
+                    config_entry,
+                    ctx.group_names,
+                    tile=tiles_by_menu_id.get(item["id"]),
+                    depth=ctx.depths[key],
+                    zone_id=ctx.zone_assignments.get(key),
+                )
+            )
 
     async_add_entities(entities, True)
 
@@ -100,6 +114,145 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        item: dict[str, Any],
+        menu_key: str,
+        coordinator: TechCoordinator,
+        config_entry: ConfigEntry,
+        group_names: dict[tuple[str, int], str],
+        depth: int = 0,
+        zone_id: int | None = None,
+    ) -> None:
+        """Initialise a menu number entity.
+
+        Args:
+            item: Menu item payload returned by the Tech API.
+            menu_key: Unique key identifying this menu item (e.g. ``MU_2089``).
+            coordinator: Shared Tech data coordinator instance.
+            config_entry: Config entry that owns the coordinator.
+            group_names: Mapping of ``(menu_type, group_id)`` to group label.
+            depth: Nesting depth of this item in the Tech menu tree
+                (0 = top-level). Drives ``entity_registry_enabled_default``.
+            zone_id: Optional zone ID to associate this entity with a zone device.
+
+        """
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._coordinator = coordinator
+        self._udid = config_entry.data[CONTROLLER][UDID]
+        self._menu_key = menu_key
+        self._item_id = item["id"]
+        self._menu_type = item["menuType"]
+        self._unique_id = f"{self._udid}_menu_{menu_key}"
+        self.manufacturer = MANUFACTURER
+        self._zone_id = zone_id
+
+        params = item.get("params", {})
+        self._format = params.get("format", 1)
+
+        self._attr_mode = NumberMode.BOX
+
+        # ``_attr_has_entity_name = True`` lets HA prepend the device name; the
+        # entity name itself is the menu label only.
+        self._name = assets.menu_entity_name(
+            item, group_names, coordinator.translations
+        )
+
+        self._disabled = depth > MENU_DEPTH_DEFAULT_ENABLED_LIMIT
+
+        self._update_from_item(item)
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return self._unique_id
+
+    @property
+    def name(self) -> str:
+        """Return the display name of this entity."""
+        return self._name
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return whether the entity should be enabled by default."""
+        return not self._disabled
+
+    @property
+    def device_info(self) -> DeviceInfo | None:
+        """Return device info for the zone or controller this entity belongs to."""
+        if self._zone_id is not None:
+            return {
+                ATTR_IDENTIFIERS: {(DOMAIN, f"{self._udid}_{self._zone_id}")},
+                ATTR_MANUFACTURER: self.manufacturer,
+            }
+        return {
+            ATTR_IDENTIFIERS: {(DOMAIN, self._udid)},
+            CONF_NAME: self._config_entry.title,
+            ATTR_MANUFACTURER: self.manufacturer,
+        }
+
+    def _update_from_item(self, item: dict[str, Any]) -> None:
+        """Refresh entity properties from a menu item payload.
+
+        Args:
+            item: Menu item dictionary with the most recent values.
+
+        """
+        params = item.get("params", {})
+        self._format = params.get("format", 1)
+        raw_value = params.get("value", 0)
+        raw_min = params.get("min", 0)
+        raw_max = params.get("max", 100)
+        step = params.get("jump", 1)
+
+        if self._format == VALUE_FORMAT_TENTH:
+            self._attr_native_value = raw_value / 10.0
+            self._attr_native_min_value = raw_min / 10.0
+            self._attr_native_max_value = raw_max / 10.0
+            self._attr_native_step = step / 10.0
+        else:
+            self._attr_native_value = float(raw_value)
+            self._attr_native_min_value = float(raw_min)
+            self._attr_native_max_value = float(raw_max)
+            self._attr_native_step = float(step)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the menu parameter to the requested value.
+
+        Update local state optimistically after the API call returns success
+        so HA reflects the change immediately. We deliberately do NOT request
+        an immediate coordinator refresh here -- the eModul API has a
+        ``duringChange: "t"`` window during which it still reports the old
+        value, so an immediate refresh would clobber the optimistic state.
+        The regular polling cadence reconciles eventually; if the
+        controller rejected the change the entity will revert by then.
+        """
+        if self._format == VALUE_FORMAT_TENTH:
+            api_value = int(value * 10)
+        else:
+            api_value = int(value)
+
+        await self.coordinator.api.set_menu_value(
+            self._udid, self._menu_type, self._item_id, {"value": api_value}
+        )
+        self._attr_native_value = value
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_coordinator_update(self, *args: Any) -> None:
+        """Handle updated data from the coordinator."""
+        menus = self._coordinator.data.get("menus", {})
+        item = menus.get(self._menu_key)
+        if item:
+            self._update_from_item(item)
+        self.async_write_ha_state()
+
+class MenuNumberCurrentValueEntity(CoordinatorEntity, NumberEntity):
+    """A numeric menu parameter exposed as a Home Assistant number entity."""
+
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -120,7 +273,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
             coordinator: Shared Tech data coordinator instance.
             config_entry: Config entry that owns the coordinator.
             group_names: Mapping of ``(menu_type, group_id)`` to group label.
-            tile: Optional tile linked to this menu item through ``menuId``.
+            tile: tile linked to this menu item through ``menuId``.
             depth: Nesting depth of this item in the Tech menu tree
                 (0 = top-level). Drives ``entity_registry_enabled_default``.
             zone_id: Optional zone ID to associate this entity with a zone device.
@@ -134,7 +287,7 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
         self._item_id = item["id"]
         self._menu_type = item["menuType"]
         self._tile_id = tile["id"] if tile else None
-        self._unique_id = f"{self._udid}_menu_{menu_key}"
+        self._unique_id = f"{self._udid}_menu_sensor_{menu_key}"
         self.manufacturer = MANUFACTURER
         self._zone_id = zone_id
 
@@ -149,6 +302,10 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
             item, group_names, coordinator.translations
         )
 
+        self._attr_translation_key = "menu_current_value_entity"
+        self._attr_translation_placeholders = {"entity_name": self._name}
+
+
         self._disabled = depth > MENU_DEPTH_DEFAULT_ENABLED_LIMIT
 
         self._update_from_item(item, tile)
@@ -157,11 +314,6 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
     def unique_id(self) -> str:
         """Return a unique ID."""
         return self._unique_id
-
-    @property
-    def name(self) -> str:
-        """Return the display name of this entity."""
-        return self._name
 
     @property
     def entity_registry_enabled_default(self) -> bool:
@@ -202,13 +354,13 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
         step = params.get("jump", 1)
         raw_unit = params.get("unit")
         raw_value = params.get("value", 0)
-        if tile and tile.get(CONF_TYPE) == TYPE_WIDGET:
-            for widget_key in ("widget1", "widget2"):
-                widget = tile.get(CONF_PARAMS, {}).get(widget_key)
-                if widget and widget.get("unit") != -1 and widget.get(CONF_TYPE) != 0 and widget.get("txtId", 0) != 0:
-                    raw_unit = widget.get("unit", raw_unit)
-                    if self._attr_device_class == SensorDeviceClass.DURATION:
-                        raw_value = widget.get("value", raw_value)
+        for widget_key in ("widget1", "widget2"):
+            widget = tile.get(CONF_PARAMS, {}).get(widget_key)
+            if widget and not _is_contact_widget(widget):
+                raw_unit = widget.get("unit", raw_unit)
+                self._attr_device_class = DEVICE_CLASS_BY_UNIT_ID.get(raw_unit, None)
+                self._attr_native_unit_of_measurement = UNIT_BY_ID.get(raw_unit)
+                raw_value = widget.get("value", raw_value)
 
         if self._format == VALUE_FORMAT_TENTH:
             self._attr_native_value = raw_value / 10.0
@@ -252,3 +404,11 @@ class MenuNumberEntity(CoordinatorEntity, NumberEntity):
         if item:
             self._update_from_item(item, tiles.get(self._tile_id))
         self.async_write_ha_state()
+
+    def _is_contact_widget(widget: dict) -> bool:
+        """Return ``True`` for widgets that should be exposed as binary contacts."""
+        return (
+            widget.get("unit") == -1
+            and widget.get(CONF_TYPE) == 0
+            and widget.get("txtId", 0) != 0
+        )        

@@ -30,6 +30,19 @@
         }
     },
     "entity": {
+        "binary_sensor": {
+            "menu_during_change_entity": {
+                "name": "{entity_name} Aktualizace"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Stav"
+            }
+        },
+        "number": {
+            "menu_current_value_entity": {
+                "name": "{entity_name} Aktuální Hodnota"
+            }
+        },
         "sensor": {
             "temperature_entity": {
                 "name": "{entity_name} Teplota"

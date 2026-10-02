@@ -30,6 +30,19 @@
         }
     },
     "entity": {
+        "binary_sensor": {
+            "menu_during_change_entity": {
+                "name": "{entity_name} Actualizare"
+            },
+            "tile_status_entity": {
+                "name": "{entity_name} Stare"
+            }
+        },
+        "number": {
+            "menu_current_value_entity": {
+                "name": "{entity_name} Valoare Actuală"
+            }
+        },
         "sensor": {
             "temperature_entity": {
                 "name": "{entity_name} Temperatură"
