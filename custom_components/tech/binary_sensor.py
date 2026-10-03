@@ -32,7 +32,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PARAMS,
     CONF_TYPE,
-    MENU_ITEM_TYPE_VALUE
+    MENU_ITEM_TYPE_VALUE,
     STATE_OFF,
     STATE_ON,
     EntityCategory,
