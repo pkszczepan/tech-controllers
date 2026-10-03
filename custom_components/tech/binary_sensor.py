@@ -32,6 +32,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PARAMS,
     CONF_TYPE,
+    MENU_ITEM_TYPE_VALUE
     STATE_OFF,
     STATE_ON,
     EntityCategory,
@@ -45,8 +46,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import TechCoordinator, assets
 from .const import (
     CONTROLLER,
+    DEFAULT_ICON,
     DOMAIN,
-    MENU_DEPTH_DEFAULT_ENABLED_LIMIT,
     MANUFACTURER,
     TYPE_ADDITIONAL_PUMP,
     TYPE_FIRE_SENSOR,
@@ -134,6 +135,10 @@ async def async_setup_entry(
                     )
 
     for key, item in menus.items():
+        item_type = item.get("type")
+        if item_type not in MENU_ITEM_TYPE_VALUE:
+            continue
+
         if "duringChange" in item:
             entities.append(
                 MenuDuringChangeSensor(
@@ -142,7 +147,6 @@ async def async_setup_entry(
                     coordinator,
                     config_entry,
                     ctx.group_names,
-                    depth=ctx.depths[key],
                     zone_id=ctx.zone_assignments.get(key),
                 )
             )
@@ -227,6 +231,13 @@ class TileStatusSensor(TileBinarySensor):
         icon_id = device[CONF_PARAMS].get("iconId")
         if icon_id:
             self._attr_icon = assets.get_icon(icon_id)
+        else:
+            self._attr_icon = assets.get_icon_by_type(device[CONF_TYPE])
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return whether the entity should be enabled by default."""
+        return False
 
     @property
     def name(self) -> str | UndefinedType | None:
@@ -305,7 +316,6 @@ class MenuDuringChangeSensor(
         coordinator: TechCoordinator,
         config_entry: ConfigEntry,
         group_names,
-        depth: int = 0,
         zone_id: int | None = None,
     ) -> None:
         """Initialize the during-change sensor."""
@@ -325,8 +335,8 @@ class MenuDuringChangeSensor(
         self._attr_translation_key = "menu_during_change_entity"
         self._attr_translation_placeholders = {"entity_name": self._name}
 
-        self._disabled = depth > MENU_DEPTH_DEFAULT_ENABLED_LIMIT
         self._attr_is_on = item.get("duringChange") == "t"
+        self._attr_icon = DEFAULT_ICON
 
     @property
     def unique_id(self) -> str:
@@ -336,7 +346,7 @@ class MenuDuringChangeSensor(
     @property
     def entity_registry_enabled_default(self) -> bool:
         """Return whether the entity should be enabled by default."""
-        return not self._disabled
+        return False
 
     @property
     def device_info(self) -> DeviceInfo:
