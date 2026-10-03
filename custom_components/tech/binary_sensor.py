@@ -26,7 +26,10 @@ import logging
 from homeassistant.components import binary_sensor
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    ATTR_IDENTIFIERS,
+    ATTR_MANUFACTURER,
     CONF_ID,
+    CONF_NAME,
     CONF_PARAMS,
     CONF_TYPE,
     STATE_OFF,
@@ -34,6 +37,7 @@ from homeassistant.const import (
     EntityCategory,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType, UndefinedType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -225,6 +229,11 @@ class TileStatusSensor(TileBinarySensor):
             self._attr_icon = assets.get_icon(icon_id)
 
     @property
+    def name(self) -> str | UndefinedType | None:
+        """Return the translated entity name."""
+        return super(TileBinarySensor, self).name
+
+    @property
     def unique_id(self) -> str:
         """Return a unique ID."""
         return f"{self._unique_id}_tile_status"
@@ -328,6 +337,20 @@ class MenuDuringChangeSensor(
     def entity_registry_enabled_default(self) -> bool:
         """Return whether the entity should be enabled by default."""
         return not self._disabled
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Associate this sensor with its controller or zone device."""
+        if self._zone_id is not None:
+            return {
+                ATTR_IDENTIFIERS: {(DOMAIN, f"{self._udid}_{self._zone_id}")},
+                ATTR_MANUFACTURER: MANUFACTURER,
+            }
+        return {
+            ATTR_IDENTIFIERS: {(DOMAIN, self._udid)},
+            CONF_NAME: self._config_entry.title,
+            ATTR_MANUFACTURER: MANUFACTURER,
+        }
 
     @callback
     def _handle_coordinator_update(self, *args) -> None:
