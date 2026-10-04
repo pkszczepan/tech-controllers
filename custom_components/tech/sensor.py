@@ -75,7 +75,6 @@ from .const import (
     DOMAIN,
     EVENTS,
     FLOOR_PUMP,
-    ICON_BY_UNIT_ID,
     INCLUDE_HUB_IN_NAME,
     LOW_BATTERY,
     LOW_SIGNAL,
@@ -87,7 +86,6 @@ from .const import (
     OPENTHERM_MODULATION,
     OPENTHERM_SET_TEMP,
     OPENTHERM_SET_TEMP_DHW,
-    SENSOR_CLASS_BY_UNIT_ID,
     SENSOR_DAMAGED,
     SENSOR_TYPE,
     SERVICE_ERROR,
@@ -600,12 +598,12 @@ def _build_widget_tile(
         else:
             # WIDGET_DHW_PUMP, WIDGET_TEMPERATURE_CH and any unknown numeric
             # widget (most commonly ``type == 0``) all flow through the
-            # temperature class. Scaling is driven by the widget's own
+            # generic class. Scaling is driven by the widget's own
             # ``unit`` field, not by the widget type, so an unknown numeric
             # type is still rendered correctly so long as ``unit`` is one of
             # the documented values in :data:`const.WIDGET_UNITS`.
             entities.append(
-                TileWidgetTemperatureSensor(tile, coordinator, config_entry, widget_key)
+                TileWidgetGenericSensor(tile, coordinator, config_entry, widget_key)
             )
     return entities
 
