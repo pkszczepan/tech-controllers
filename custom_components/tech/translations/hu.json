@@ -32,7 +32,7 @@
     "entity": {
         "binary_sensor": {
             "menu_during_change_entity": {
-                "name": "{entity_name} Frissítés alatt"
+                "name": "{entity_name} Módosítás Folyamatban"
             },
             "tile_status_entity": {
                 "name": "{entity_name} Állapot"

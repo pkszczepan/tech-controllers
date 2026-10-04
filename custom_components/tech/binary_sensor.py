@@ -48,6 +48,7 @@ from .const import (
     DEFAULT_ICON,
     DOMAIN,
     MANUFACTURER,
+    MENU_ITEM_TYPE_ON_OFF,
     MENU_ITEM_TYPE_VALUE,
     TYPE_ADDITIONAL_PUMP,
     TYPE_FIRE_SENSOR,
@@ -136,7 +137,7 @@ async def async_setup_entry(
 
     for key, item in menus.items():
         item_type = item.get("type")
-        if item_type not in MENU_ITEM_TYPE_VALUE:
+        if item_type not in MENU_ITEM_TYPE_VALUE | {MENU_ITEM_TYPE_ON_OFF}:
             continue
 
         if "duringChange" in item:

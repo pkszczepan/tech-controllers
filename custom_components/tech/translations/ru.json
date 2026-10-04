@@ -32,7 +32,7 @@
     "entity": {
         "binary_sensor": {
             "menu_during_change_entity": {
-                "name": "{entity_name} Обновляется"
+                "name": "{entity_name} Изменение Выполняется"
             },
             "tile_status_entity": {
                 "name": "{entity_name} Состояние"
