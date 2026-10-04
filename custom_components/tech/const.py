@@ -100,7 +100,8 @@ PLATFORMS = [
 
 # Coordinator polling cadence. The eModul cloud rate-limits aggressive
 # polling, and the boiler tile data does not change faster than ~60s anyway.
-# 30s allow a comfortable margin.
+# Recuparators have timers updated every minute, so 30 seconds ensures
+# a comfortable margin for timely updates.
 SCAN_INTERVAL: Final = timedelta(seconds=30)
 API_TIMEOUT: Final = 60
 
@@ -211,24 +212,6 @@ DEVICE_CLASS_BY_UNIT_ID = {
     16: SensorDeviceClass.DURATION,
     17: SensorDeviceClass.DURATION,
 }
-
-SENSOR_CLASS_BY_UNIT_ID = {
-    4: None,
-    6: SensorStateClass.MEASUREMENT,
-    7: SensorStateClass.MEASUREMENT,
-    14: SensorStateClass.TOTAL,
-    16: SensorStateClass.TOTAL,
-    17: SensorStateClass.TOTAL,
-}
-
-ICON_BY_UNIT_ID = {
-    6: "mdi:thermometer",
-    7: "mdi:thermometer",
-    14: "mdi:calendar-clock",
-    16: "mdi:timer-outline",
-    17: "mdi:timer-outline",
-}
-
 
 # ---------------------------------------------------------------------------
 # txtId fallbacks

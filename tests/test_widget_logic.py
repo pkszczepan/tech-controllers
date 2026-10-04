@@ -129,11 +129,15 @@ class TestIsContactWidget:
         binary_src = (
             _REPO_ROOT / "custom_components" / "tech" / "binary_sensor.py"
         ).read_text()
+        number_src = (
+            _REPO_ROOT / "custom_components" / "tech" / "number.py"
+        ).read_text()
         # Both files must define _is_contact_widget.
         assert "def _is_contact_widget" in sensor_src
         assert "def _is_contact_widget" in binary_src
+        assert "def _is_contact_widget" in number_src
         # Both implementations must reference the same three marker fields.
-        for src in (sensor_src, binary_src):
+        for src in (sensor_src, binary_src, number_src):
             assert 'widget.get("unit") == -1' in src
             assert 'widget.get("txtId", 0) != 0' in src
 
@@ -167,7 +171,7 @@ class TestUnitDivisors:
     def test_known_units_only(self):
         """Pin the set of known unit codes to detect accidental additions."""
         # Codes outside the table fall back to a divisor of 1 in
-        # _build_widget_tile / TileWidgetTemperatureSensor.get_state.
+        # _build_widget_tile / TileWidgetGenericSensor.get_state.
         assert set(C.WIDGET_UNIT_DIVISORS.keys()) == {0, 4, 5, 6, 7, 8, 23, 26, 33}
 
 
@@ -441,7 +445,7 @@ class TestSt2801Fixture:
         assert tile["params"]["widget2"]["unit"] == 8
 
     def test_unit_8_widgets_route_to_percentage(self):
-        """Unit=8 widgets must be dispatched to TileWidgetPumpSensor, not TileWidgetTemperatureSensor.
+        """Unit=8 widgets must be dispatched to TileWidgetPumpSensor, not TileWidgetGenericSensor.
 
         Before the fix for #195, widget1 (type=1, unit=8, txtId=428
         "Modulation") fell into the temperature branch and was displayed
