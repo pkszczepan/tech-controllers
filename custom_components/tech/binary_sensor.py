@@ -169,6 +169,7 @@ def _has_pump_widget(params: dict) -> bool:
         metadata = widget_unit(widget.get("unit"))
         if (
             metadata.device_class == SensorDeviceClass.TEMPERATURE
+            or metadata.device_class == SensorDeviceClass.DURATION
             or metadata.unit == PERCENTAGE
         ):
             return True
@@ -222,13 +223,13 @@ async def async_setup_entry(
             entities.append(RelaySensor(tile, coordinator, config_entry))
         if tile[CONF_TYPE] == TYPE_WIDGET:
             params = tile.get(CONF_PARAMS, {})
-            for widget_key in ("widget1", "widget2"):
-                widget = tile.get(CONF_PARAMS, {}).get(widget_key)
-                if widget and widget.get("txtId", 0) != 0 and "statusId" in params:
-                    entities.append(
-                        TileStatusSensor(tile, coordinator, config_entry, widget_key)
-                    )                
-                    break 
+            # for widget_key in ("widget1", "widget2"):
+            #     widget = tile.get(CONF_PARAMS, {}).get(widget_key)
+            #     if widget and widget.get("txtId", 0) != 0 and "statusId" in params:
+            #         entities.append(
+            #             TileStatusSensor(tile, coordinator, config_entry, widget_key)
+            #         )                
+            #         break 
             for widget_key in ("widget1", "widget2"):
                 widget = params.get(widget_key)
                 if not widget:
@@ -247,6 +248,19 @@ async def async_setup_entry(
                         )
                     )
 
+            # TYPE_WIDGET tiles with statusId 0 or 1 carry ON/OFF state for
+            # PWM-controlled pumps (e.g. solar collector). Only emit the binary
+            # sensor when the tile carries a pump widget that reads a pump
+            # quantity -- a temperature or a percentage -- so that a pressure,
+            # energy or runtime tile does not raise a phantom ON/OFF entity
+            # (issue #221). Pure temperature or contact widgets always report
+            # statusId=1 and never toggle.
+            status_id = tile.get(CONF_PARAMS, {}).get("statusId")
+            if status_id in (0, 1) and _has_pump_widget(tile.get(CONF_PARAMS, {})):
+                entities.append(
+                    TileWidgetStatusSensor(tile, coordinator, config_entry)
+                )
+
     for key, item in menus.items():
         item_type = item.get("type")
         if item_type not in MENU_ITEM_TYPE_VALUE | {MENU_ITEM_TYPE_ON_OFF}:
@@ -262,20 +276,7 @@ async def async_setup_entry(
                     ctx.group_names,
                     zone_id=ctx.zone_assignments.get(key),
                 )
-            )
-                     
-            # TYPE_WIDGET tiles with statusId 0 or 1 carry ON/OFF state for
-            # PWM-controlled pumps (e.g. solar collector). Only emit the binary
-            # sensor when the tile carries a pump widget that reads a pump
-            # quantity -- a temperature or a percentage -- so that a pressure,
-            # energy or runtime tile does not raise a phantom ON/OFF entity
-            # (issue #221). Pure temperature or contact widgets always report
-            # statusId=1 and never toggle.
-            status_id = tile.get(CONF_PARAMS, {}).get("statusId")
-            if status_id in (0, 1) and _has_pump_widget(tile.get(CONF_PARAMS, {})):
-                entities.append(
-                    TileWidgetStatusSensor(tile, coordinator, config_entry)
-                )
+            )                
 
     async_add_entities(entities, True)
 
@@ -333,51 +334,51 @@ class RelaySensor(TileBinarySensor):
         return device[CONF_PARAMS]["workingStatus"]
 
 
-class TileStatusSensor(TileBinarySensor):
-    """Binary sensor representing a tile's statusId."""
+# class TileStatusSensor(TileBinarySensor):
+#     """Binary sensor representing a tile's statusId."""
 
-    _attr_has_entity_name = True
+#     _attr_has_entity_name = True
 
-    def __init__(
-        self,
-        device,
-        coordinator: TechCoordinator,
-        config_entry,
-        widget_key: str
-    ) -> None:
-        """Initialize the status sensor."""
-        self._widget_key = widget_key
-        TileBinarySensor.__init__(self, device, coordinator, config_entry)
-        self._unique_id = f"{self._udid}_{device[CONF_ID]}_status"
-        widget = device[CONF_PARAMS][widget_key]
-        self._name = coordinator.translations.get_text(widget["txtId"])
-        self._attr_translation_key = "tile_status_entity"
-        self._attr_translation_placeholders = {"entity_name": self._name}
+#     def __init__(
+#         self,
+#         device,
+#         coordinator: TechCoordinator,
+#         config_entry,
+#         widget_key: str
+#     ) -> None:
+#         """Initialize the status sensor."""
+#         self._widget_key = widget_key
+#         TileBinarySensor.__init__(self, device, coordinator, config_entry)
+#         self._unique_id = f"{self._udid}_{device[CONF_ID]}_status"
+#         widget = device[CONF_PARAMS][widget_key]
+#         self._name = coordinator.translations.get_text(widget["txtId"])
+#         self._attr_translation_key = "tile_status_entity"
+#         self._attr_translation_placeholders = {"entity_name": self._name}
 
-        icon_id = device[CONF_PARAMS].get("iconId")
-        if icon_id:
-            self._attr_icon = assets.get_icon(icon_id)
-        else:
-            self._attr_icon = assets.get_icon_by_type(device[CONF_TYPE])
+#         icon_id = device[CONF_PARAMS].get("iconId")
+#         if icon_id:
+#             self._attr_icon = assets.get_icon(icon_id)
+#         else:
+#             self._attr_icon = assets.get_icon_by_type(device[CONF_TYPE])
 
-    @property
-    def entity_registry_enabled_default(self) -> bool:
-        """Return whether the entity should be enabled by default."""
-        return False
+#     @property
+#     def entity_registry_enabled_default(self) -> bool:
+#         """Return whether the entity should be enabled by default."""
+#         return False
 
-    @property
-    def name(self) -> str | UndefinedType | None:
-        """Return the translated entity name."""
-        return super(TileBinarySensor, self).name
+#     @property
+#     def name(self) -> str | UndefinedType | None:
+#         """Return the translated entity name."""
+#         return super(TileBinarySensor, self).name
 
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        return f"{self._unique_id}_tile_status"
+#     @property
+#     def unique_id(self) -> str:
+#         """Return a unique ID."""
+#         return f"{self._unique_id}_tile_status"
 
-    def get_state(self, device):
-        """Return the tile status from statusId."""
-        return device[CONF_PARAMS].get("statusId", 0) == 1
+#     def get_state(self, device):
+#         """Return the tile status from statusId."""
+#         return device[CONF_PARAMS].get("statusId", 0) == 1
 
 
 class TileWidgetContactSensor(TileBinarySensor):
@@ -510,74 +511,10 @@ class TileWidgetStatusSensor(TileBinarySensor):
                     break
 
     @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        return f"{self._unique_id}_tile_status"
-
-    def get_state(self, device):
-        """Return the ON/OFF state from the tile's statusId.
-
-        Args:
-            device: Tile payload returned by the Tech API.
-
-        Returns:
-            ``True`` when statusId == 1 (ON), ``False`` when statusId == 0
-            (OFF). Any other value is returned as ``None`` (unknown).
-
-        """
-        status_id = device[CONF_PARAMS].get("statusId")
-        if status_id == 1:
-            return True
-        if status_id == 0:
-            return False
-        return None
-
-
-class TileWidgetStatusSensor(TileBinarySensor):
-    """A TYPE_WIDGET tile whose ``statusId`` signals ON/OFF pump state.
-
-    PWM-controlled pumps (solar collector, etc.) use ``statusId``
-    (1=ON, 0=OFF) rather than a ``workingStatus`` boolean or a relay
-    tile. The tile's own widgets carry temperature readings handled by
-    :mod:`sensor`; this entity adds the companion ON/OFF indicator.
-
-    Only statusId values 0 and 1 are consumed — larger values are
-    translation keys for :class:`~sensor.TileTextSensor` and are ignored
-    here.
-    """
-
-    _attr_device_class = binary_sensor.BinarySensorDeviceClass.RUNNING
-
-    def __init__(
-        self,
-        device,
-        coordinator: TechCoordinator,
-        config_entry,
-    ) -> None:
-        """Initialise the status-id-backed binary sensor.
-
-        Args:
-            device: Tile payload returned by the Tech API.
-            coordinator: Shared Tech data coordinator instance.
-            config_entry: Config entry providing controller metadata.
-
-        """
-        TileBinarySensor.__init__(self, device, coordinator, config_entry)
-        icon_id = device[CONF_PARAMS].get("iconId")
-        if icon_id:
-            self._attr_icon = assets.get_icon(icon_id)
-        # Override the name from TileEntity's "type 6" fallback to the
-        # pump widget's own label (e.g. "Pompa solarna"). Iterate widgets
-        # in order so widget1's txtId wins when both carry labels.
-        params = device.get(CONF_PARAMS, {})
-        for key in ("widget1", "widget2"):
-            widget = params.get(key, {})
-            if widget.get(CONF_TYPE) in (WIDGET_DHW_PUMP, WIDGET_COLLECTOR_PUMP):
-                txt_id = widget.get("txtId", 0)
-                if txt_id > 0:
-                    self._name = coordinator.translations.get_text(txt_id)
-                    break
-
+    def entity_registry_enabled_default(self) -> bool:
+        """Return whether the entity should be enabled by default."""
+        return False
+    
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""

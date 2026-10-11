@@ -71,7 +71,6 @@ from .const import (
     CONTROLLER,
     CORRECT_WORK,
     CURRENT_STATE,
-    DEVICE_CLASS_BY_UNIT_ID,
     DOMAIN,
     EVENTS,
     FLOOR_PUMP,
@@ -103,7 +102,6 @@ from .const import (
     TYPE_WIDGET,
     UDID,
     UNDERFLOOR,
-    UNIT_BY_ID,
     VALUE,
     VALVE_SENSOR_CURRENT_TEMPERATURE,
     VALVE_SENSOR_RETURN_TEMPERATURE,
@@ -598,12 +596,12 @@ def _build_widget_tile(
         else:
             # WIDGET_DHW_PUMP, WIDGET_TEMPERATURE_CH and any unknown numeric
             # widget (most commonly ``type == 0``) all flow through the
-            # generic class. Scaling is driven by the widget's own
+            # temperature class. Scaling is driven by the widget's own
             # ``unit`` field, not by the widget type, so an unknown numeric
             # type is still rendered correctly so long as ``unit`` is one of
             # the documented values in :data:`const.WIDGET_UNITS`.
             entities.append(
-                TileWidgetGenericSensor(tile, coordinator, config_entry, widget_key)
+                TileWidgetTemperatureSensor(tile, coordinator, config_entry, widget_key)
             )
     return entities
 

@@ -362,27 +362,6 @@ ICON_BY_TYPE = {
 }
 
 # ---------------------------------------------------------------------------
-# Unit mapping tables
-# ---------------------------------------------------------------------------
-UNIT_BY_ID = {
-    4: None,
-    6: UnitOfTemperature.CELSIUS,
-    7: UnitOfTemperature.CELSIUS,
-    14: UnitOfTime.DAYS,
-    16: UnitOfTime.SECONDS,
-    17: UnitOfTime.MINUTES,
-}
-
-DEVICE_CLASS_BY_UNIT_ID = {
-    4: None,
-    6: SensorDeviceClass.TEMPERATURE,
-    7: SensorDeviceClass.TEMPERATURE,
-    14: SensorDeviceClass.DURATION,
-    16: SensorDeviceClass.DURATION,
-    17: SensorDeviceClass.DURATION,
-}
-
-# ---------------------------------------------------------------------------
 # txtId fallbacks
 # ---------------------------------------------------------------------------
 # When a tile has no ``txtId`` (or the per-tile txtId carries a status string
