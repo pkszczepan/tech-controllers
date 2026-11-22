@@ -483,18 +483,18 @@ class TileWidgetStatusSensor(TileBinarySensor):
                     self._name = coordinator.translations.get_text(txt_id)
                     break
 
-    #     self._attr_translation_key = "tile_status_entity"
-    #     self._attr_translation_placeholders = {"entity_name": self._name}                
+        self._attr_translation_key = "tile_status_entity"
+        self._attr_translation_placeholders = {"entity_name": self._name}                
 
-    # @property
-    # def entity_registry_enabled_default(self) -> bool:
-    #     """Return whether the entity should be enabled by default."""
-    #     return False
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return whether the entity should be enabled by default."""
+        return False
 
-    # @property
-    # def name(self) -> str | UndefinedType | None:
-    #     """Return the translated entity name."""
-    #     return super(TileBinarySensor, self).name    
+    @property
+    def name(self) -> str | UndefinedType | None:
+        """Return the translated entity name."""
+        return super(TileBinarySensor, self).name    
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""
